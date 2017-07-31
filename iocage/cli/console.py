@@ -25,7 +25,7 @@
 
 import click
 
-import iocage.lib.iocage as ioc
+import Jail
 
 __rootcmd__ = True
 
@@ -36,5 +36,6 @@ def cli(jail):
     """
     Runs jexec to login into the specified jail.
     """
-    # Command is empty since this command is hardcoded later on.
-    ioc.IOCage(jail, silent=True).exec("", console=True)
+    print(jail)
+    jail = Jail.Jail(jail)
+    jail.exec_console()
