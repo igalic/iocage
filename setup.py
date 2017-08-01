@@ -62,5 +62,5 @@ setup(name='iocage',
           ]
       },
       data_files=_data,
-      tests_require=['pytest', 'pytest-cov', 'pytest-pep8']
+      tests_require=['pytest', 'pytest-cov', 'pytest-pep8', 'hypothesis']
       )
