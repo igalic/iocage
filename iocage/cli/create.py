@@ -50,7 +50,7 @@ def validate_count(ctx, param, value):
             return int(value)
         except ValueError:
             logger.log.error(f"{value} is not a valid integer.")
-            sys.exit(1)
+            exit(1)
     else:
         return int(value)
 
@@ -95,7 +95,7 @@ def cli(release, template, count, props, pkglist, basejail, basejail_type,
 
     if short is True:
       logger.error("ToDo: Support short UUIDS")
-      sys.exit(1)
+      exit(1)
 
     if release is None:
       logger.spam(f"No release selected (-r, --release)."
@@ -108,7 +108,7 @@ def cli(release, template, count, props, pkglist, basejail, basejail_type,
             logger.error(
               f"Invalid character in {name}, please remove it."
             )
-            sys.exit(1)
+            exit(1)
 
     release = Release.Release(name=release, logger=logger, host=host, zfs=zfs)
     if not release.fetched:
@@ -116,12 +116,12 @@ def cli(release, template, count, props, pkglist, basejail, basejail_type,
         if not release.available:
             msg = f"The release '{name}' does not exist"
             logger.error(msg)
-            sys.exit(1)
+            exit(1)
 
         msg = f"The release '{name}' is available, but not downloaded yet"
         if no_fetch:  
           logger.error(msg)
-          sys.exit(1)
+          exit(1)
         else:
           logger.spam(msg)
           logger.log("Automatically fetching release '{release}'")
@@ -135,7 +135,7 @@ def cli(release, template, count, props, pkglist, basejail, basejail_type,
     if basejail_type is not None:
       if not basejail:
         logger.error("Cannot set --basejail-type without --basejail option")
-        sys.exit(1)
+        exit(1)
       jail_data["basejail_type"] = basejail_type
 
     if props:
@@ -145,7 +145,7 @@ def cli(release, template, count, props, pkglist, basejail, basejail_type,
               jail_data[key] = value
           except:
               logger.error(f"Invalid property {prop}")
-              sys.exit(1)
+              exit(1)
 
     for i in range(count):
 
