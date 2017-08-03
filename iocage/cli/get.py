@@ -23,97 +23,77 @@
 # POSSIBILITY OF SUCH DAMAGE.
 """get module for the cli."""
 import click
-import texttable
+import sys
 
-import iocage.lib.ioc_common as ioc_common
-import iocage.lib.iocage as ioc
+import Logger
+import Jail
+import Host
 
+logger = Logger.Logger()
+host = Host.Host(logger=logger)
 
 @click.command(context_settings=dict(
     max_content_width=400, ), name="get", help="Gets the specified property.")
 @click.argument("prop", required=True, default="")
 @click.argument("jail", required=True, default="")
-@click.option("--header", "-h", "-H", is_flag=True, default=True,
-              help="For scripting, use tabs for separators.")
-@click.option("--recursive", "-r", help="Get the specified property for all " +
-                                        "jails.", flag_value="recursive")
-@click.option("--plugin", "-P",
-              help="Get the specified key for a plugin jail, if accessing a"
-                   " nested key use . as a separator."
-                   "\n\b Example: iocage get -P foo.bar.baz PLUGIN",
-              is_flag=True)
 @click.option("--all", "-a", "_all", help="Get all properties for the "
                                           "specified jail.", is_flag=True)
 @click.option("--pool", "-p", "_pool", help="Get the currently activated "
                                             "zpool.", is_flag=True)
-def cli(prop, _all, _pool, jail, recursive, header, plugin):
+def cli(prop, _all, _pool, jail):
     """Get a list of jails and print the property."""
-    table = texttable.Texttable(max_width=0)
+    if _pool is True:
+        try:
+            print(host.datasets.active_pool.name)
+        except:
+            print("No active pool found")
+        sys.exit(1)
 
-    if _all:
-        # Confusing I know.
-        jail = prop
-        prop = "all"
-    elif _pool:
-        pool = ioc.IOCage(skip_jails=True).get("", pool=True)
-        ioc_common.logit({
-            "level"  : "INFO",
-            "message": pool
-        })
-        exit()
+    if jail == "":
+        jail_identifier = prop
+        prop = ""
     else:
-        if not jail and not recursive:
-            ioc_common.logit({
-                "level"  : "EXCEPTION",
-                "message": "You must specify a jail!"
-            })
+        jail_identifier = jail
 
-    if not recursive:
-        if prop == "state":
-            state = ioc.IOCage(jail).get(prop)
+    jail_identifier = jail
+    jail = Jail.Jail(
+        jail_identifier,
+        host=host,
+        logger=logger
+    )
 
-            ioc_common.logit({
-                "level"  : "INFO",
-                "message": state
-            })
-        elif plugin:
-            _plugin = ioc.IOCage(jail, skip_jails=True).get(prop, plugin=True)
+    if not jail.exists:
+        logger.error("Jail '{jail}' does not exist")
+        sys.exit(1)
 
-            ioc_common.logit({
-                "level"  : "INFO",
-                "message": _plugin
-            })
-        elif prop == "all":
-            props = ioc.IOCage(jail, skip_jails=True).get(prop)
+    if _all is True:
+        prop = None
 
-            for p, v in props.items():
-                ioc_common.logit({
-                    "level"  : "INFO",
-                    "message": f"{p}:{v}"
-                })
-        else:
-            p = ioc.IOCage(jail, skip_jails=True).get(prop)
+    if prop == "all":
+        prop = None
 
-            ioc_common.logit({
-                "level"  : "INFO",
-                "message": p
-            })
-    else:
-        jail_list = ioc.IOCage().get(prop, recursive=True)
+    if (prop is None) and (jail_identifier == "") and not _all:
+        logger.error("Missing arguments property and jail")
+        raise Exception("foo")
+        sys.exit(1)
+    elif (prop is not None) and (jail_identifier == ""):
+        logger.error("Missing argument property name or -a/--all argument")
+        sys.exit(1)
 
-        # Prints the table
-        if header:
-            jail_list.insert(0, ["NAME", f"PROP - {prop}"])
-            # We get an infinite float otherwise.
-            table.set_cols_dtype(["t", "t"])
-            table.add_rows(jail_list)
-            ioc_common.logit({
-                "level"  : "INFO",
-                "message": table.draw()
-            })
-        else:
-            for jail in jail_list:
-                ioc_common.logit({
-                    "level"  : "INFO",
-                    "message": "\t".join(jail)
-                })
+    if prop:
+        try:
+            print_property(prop, jail.config.__getattr__(prop, string=True))
+            return
+        except:
+            raise
+            logger.error(f"Unknown property '{prop}'")
+
+    for key in jail.config.all_properties:
+        if (prop == None) or (key == prop):
+            value = jail.config.__getattr__(key, string=True)
+            print_property(key, value)
+
+def print_property(key, value):
+    key = str(key)
+    value = str(value)
+    print(f"{key}:{value}")
